@@ -8,13 +8,13 @@ import threading, inspect, ctypes
 常量定义
 """
 
-TITLELIST = [": v1.0.0", "：最新版！（大概）", ": Hello World", "未完成版",
+TITLELIST = [": v1.1.4", "：最新版！（大概）", ": Hello World", "：持续更新中",
              "：扫地洗衣", "：偷袭暗杀", "：请问兼桑在这里吗？", "",
-             "：自定义标题", "：兼桑————————", "：：：",
-             "|ω・`)", "：( ˘ω˘`)", "", ": kanesan.love",
+             "：自定义标题", "：兼桑————————", "：：：", "：检非违使狩猎中",
+             "|ω・`)", "：( ˘ω˘`)", "：要不要剪个头发？", ": kanesan.love",
              "：( ^ ^`)", "：我来咏一句吧？梅（以下略）", "：这力量是铁 这力量是钢",
-             "：兼桑兼桑兼桑", "：传说中的胁差", "：例行搜查",
-             "：邪道", "：也不要忘了兄弟们哦", " : nukinuk", "：内置manbachan", "：内置兄弟"]
+             "：兼桑兼桑兼桑", "：传说中的胁差", "：例行搜查", "：兄弟的筋肉",
+             "：邪道", "：也不要忘了兄弟们哦", " : nuk-iroh", "：内置manbachan", "：内置兄弟"]
 # 每5min输出的提示
 MIN_CHAT = ["又是5分钟。", "嗯，5分钟过去了。还要继续呢！",
             "就以5分钟为一步，慢慢走下去吧！",
@@ -81,7 +81,7 @@ def log(result):
 
 
 log("本程序不为使用脚本所造成的损失承担任何责任")
-log("Kuni-kun 1.0.0    暂不支持在程序内编辑脚本")
+log("Kuni-kun 1.1.0    暂不支持在程序内编辑脚本")
 
 scrl2['command'] = text2.yview
 
@@ -235,7 +235,7 @@ def stop_thread(thread):
     _async_raise(thread.ident, SystemExit)
 
 
-def endscript():
+def endscript(errmsg='None'):
     global t1
     global t2
     global on_run
@@ -243,6 +243,21 @@ def endscript():
     stop_thread(t2)
     log("结束运行。" + choose_end_chat(min_count))
     button4.configure(text="执行\n脚本")
+    if not errmsg == 'None':
+        # 在这里添加新的异常结束情况弹窗
+        if errmsg == 'gb':
+            win32api.MessageBox(0, "队内男士的特上刀装损坏了", "金蛋掉了！", win32con.MB_ICONWARNING)
+        elif errmsg.find('inj') >= 0:
+            if errmsg == 'inj0':
+                win32api.MessageBox(0, "出现重伤了", "负伤了！", win32con.MB_ICONWARNING)
+            elif errmsg == 'inj1':
+                win32api.MessageBox(0, "出现中伤以上伤员了", "负伤了！", win32con.MB_ICONWARNING)
+            else:
+                win32api.MessageBox(0, "出现轻伤以上伤员了", "负伤了！", win32con.MB_ICONWARNING)
+        elif errmsg == 'lim':
+            win32api.MessageBox(0, "出阵结束", "结束啦！", win32con.MB_ICONASTERISK)
+        else:
+            win32api.MessageBox(0, "未定义的结束情况", "怎么回事？", win32con.MB_ICONHAND)
     disp_text()
     stop_thread(t1)
 
@@ -318,6 +333,7 @@ button4.place(x=655, y=405, width=135, height=185)
 # ---------------------------通用-----------------------------------------------
 last_map = False  # 出阵界面默认的出阵图，是否已经固定为上次出阵时的目的地（已不用选择时代）
 checked_balls = False  # 是否已经获取了一遍金蛋位置
+battles = 0  # 已经出阵过的次数
 if_gold_tama = []  # 这个位置上是否是金刀装
 
 
@@ -327,9 +343,11 @@ def init_params():
     """
     global last_map
     global checked_balls
+    global battles
     global if_gold_tama
     last_map = False
     checked_balls = False
+    battles = 0
     for i in range(6):
         if_gold_tama.append([False, False, False])
 
@@ -371,9 +389,34 @@ def if_in_battle_count():
 
 def if_in_next_point():
     # 当前是否在可以进军的界面
-    return (check_rgb(41, 18, [33, 2, 9]) and
+    return (check_rgb(32, 136, [255, 255, 255]) and
             check_rgb(54, 106, [28, 205, 26]) and
-            check_rgb(614, 459, [255, 255, 255]))
+            check_rgb(818, 473, [255, 255, 255]))
+
+
+def if_drop_gb():
+    # 在可以进军的界面，检查是否比起出阵时少了金蛋
+    if_dropped_gb = False
+    for i in range(6):
+        for j in range(3):
+            if if_gold_tama[i][j] and (
+                    not check_rgb_rough(MARCH_GB_X[j], MARCH_GB_Y[i],
+                                        MARCH_GB_RGB, MARCH_GB_ERR)):
+                if_dropped_gb = True
+    return if_dropped_gb
+
+
+def if_injure(injury=0):
+    """
+    在可以进军的界面，检查是否有队员负伤
+    参数：
+    injury，0-仅重伤，1-中伤以上，2-轻伤以上
+    """
+    if_injured = False
+    for i in range(6):
+        for j in range(injury + 1):
+            if_injured |= check_rgb_rough(MARCH_INJ_X, MARCH_INJ_Y[i], MARCH_INJ_RGB[j], MARCH_INJ_ERR)
+    return if_injured
 
 
 def enter_battle_face():
@@ -397,10 +440,34 @@ ENTER_GB_Y = [134, 204, 274, 343, 413, 483]
 ENTER_GB_RGB = [255, 215, 94]
 ENTER_GB_ERR = 20
 # 临进军前检查金刀装位置
-MARCH_GB_X = [425, 478, 520]
+MARCH_GB_X = [425, 478, 530]
 MARCH_GB_Y = [163, 231, 299, 367, 435, 503]
 MARCH_GB_RGB = [255, 210, 86]
-MARCH_GB_ERR = 20
+MARCH_GB_ERR = 50
+# 临进军前检查负伤情况
+MARCH_INJ_X = 208
+MARCH_INJ_Y = [137, 205, 273, 341, 409, 477]
+MARCH_INJ_RGB = [[239, 0, 0], [255, 119, 0], [239, 204, 0]]  # 重，中，低
+MARCH_INJ_ERR = 30  # 10似乎就够了？
+
+
+def check_gb():
+    """
+    出门前检查带了多少金蛋
+    """
+    global if_gold_tama
+    # 切换两下，浏览刀装
+    click(152, 93)
+    wait(500)
+    click(152, 93)
+    wait(1000)
+    # 记录各位置上是否有金蛋
+    str_gb = ""
+    for i in range(6):
+        for j in range(3):
+            if_gold_tama[i][j] = check_rgb_rough(ENTER_GB_X[j], ENTER_GB_Y[i], ENTER_GB_RGB, ENTER_GB_ERR)
+        str_gb += "\n队员" + str(i + 1) + ": " + str(if_gold_tama[i])
+    log("正常刀装情况如下：" + str_gb)
 
 
 def enter_battle_map():
@@ -420,19 +487,8 @@ def enter_battle_map():
         wait(500)
     wait(500)
     if not checked_balls:
-        # 切换两下，浏览刀装
-        click(152, 93)
-        wait(500)
-        click(152, 93)
-        wait(1000)
-        # 记录各位置上是否有金蛋
-        str_gb = ""
-        for i in range(6):
-            for j in range(3):
-                if_gold_tama[i][j] = check_rgb_rough(ENTER_GB_X[j], ENTER_GB_Y[i], ENTER_GB_RGB, ENTER_GB_ERR)
-            str_gb += "\n队员" + str(i+1) + ": " + str(if_gold_tama[i])
+        check_gb()
         checked_balls = True
-        log("正常刀装情况如下："+str_gb)
     click(899, 502)
     wait(1000)
     click(408, 378)
@@ -530,7 +586,6 @@ def which_map():
     7: check_rgb(702, 500,[0,0,0])
     8: check_rgb(544, 561,[0,0,0])
     """
-    current_map = 8
     if check_rgb(179, 568, [32, 31, 26]):
         current_map = 5
     elif check_rgb(544, 561, [0, 0, 0]):
@@ -580,22 +635,51 @@ def map_select(m, n, last_map=False):
     wait(500)
 
 
-def go_battle_simple(m, n):
+def go_battle_simple(m, n, middle=None, injury=0, limit=0):
     """
     从本丸或者战中的任何一个点开始，进入无脑loop的循环
+    参数：
+    m : 1~8 的整数，出阵的时代
+    n : 1~4 的整数，出阵的具体地图
+    middle : 形如[x,y,[r,g,b]]的数组, 当满足这个颜色条件的时候，说明该中途回城了
+    injure : 0-重，1-中，2-轻的整数，中止脚本所需伤势
+    limit : 最大出阵次数，刷花时设成3就行。
     """
     global last_map
+    global battles
     if if_in_home():
+        # 在本丸内
+        if limit and battles >= limit:
+            endscript('lim')  # 结束，并告知是因为到达出阵上限退出的
         enter_battle_select()
         map_select(m, n, last_map)
         enter_battle_map()
+        battles += 1
         if not last_map:
             log(BATTLE_CHAT[m - 1][n - 1])
             last_map = True
+        else:
+            log("出阵 × " + str(battles))
+    elif if_in_next_point():
+        # 到了该进军的时候
+        if_mid = False
+        if middle:
+            if_mid = check_rgb(middle[0], middle[1], middle[2])  # 是否到该回城的预设点
+        if_dropped_gb = if_drop_gb()
+        if_injured = if_injure(injury)
+        if if_mid or if_dropped_gb or if_injured:  # 到地方了，要回城了
+            click(932, 440)
+            wait(500)
+            click(415, 377)
+            if if_dropped_gb:  # 掉金蛋必退出
+                endscript('gb')  # 结束后告知是因为掉蛋而退出的
+            elif if_injured:  # 负伤要看程度
+                endscript('inj' + str(injury))
+        wait(500)
+        click(631, 449)
     else:
-        for i in range(5):
-            click(631, 449)
-            wait(800)
+        click(631, 157)  # 没啥事的时候点上面，憋点下边，要不然可能误触进军
+    wait(1000)
 
 
 # -------------------------通用活动---------------------------------------------
