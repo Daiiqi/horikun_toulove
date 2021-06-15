@@ -3,7 +3,9 @@ import time, random
 import tkinter
 import os, sys
 import threading, inspect, ctypes
+# 包装：pyinstaller -F -w horikun.py
 
+# <editor-fold desc="horikun: 基本的界面及功能">
 """
 常量定义
 """
@@ -50,7 +52,7 @@ t2 = threading.Thread()
 ITSNAME = "ToukenBrowserChromeWindow"
 hwnd = 0
 hwndDCf = 0
-# 包装：pyinstaller -F -w horikun.py
+
 on_run = False
 
 """
@@ -324,11 +326,10 @@ def choose_end_chat(count):
 button4 = tkinter.Button(root, bg='maroon', fg='white', activebackground='crimson',
                          font=("华文行楷", 40), text="执行\n脚本", command=on_button)
 button4.place(x=655, y=405, width=135, height=185)
-
+# </editor-fold>
 """
 暴力引入实用函数库manbachan
 """
-
 # <editor-fold desc="manbachan: 用来给horikun运行时提供支持的函数库。">
 # ---------------------------通用-----------------------------------------------
 last_map = False  # 出阵界面默认的出阵图，是否已经固定为上次出阵时的目的地（已不用选择时代）
@@ -354,9 +355,9 @@ def init_params():
 
 def if_in_home():
     # 当前是否在本丸
-    return (check_rgb(35, 44, [37, 145, 84]) and
-            check_rgb(37, 555, [3, 77, 36]) and
-            check_rgb(692, 45, [160, 25, 35]))
+    return (check_rgb(45, 47, [4, 124, 58]) and
+            check_rgb(69, 567, [234, 227, 175]) and
+            check_rgb(584, 43, [162, 27, 36]))
 
 
 def if_in_battle_select():
@@ -368,7 +369,7 @@ def if_in_battle_select():
 
 def if_in_group_select():
     # 当前是否在选择部队界面
-    return (check_rgb(799, 128, [89, 131, 129]) and
+    return (check_rgb(827, 124, [120, 214, 216]) and
             check_rgb(28, 241, [98, 11, 11]) and
             check_rgb(651, 160, [0, 53, 134]))
 
@@ -390,7 +391,7 @@ def if_in_battle_count():
 def if_in_next_point():
     # 当前是否在可以进军的界面
     return (check_rgb(32, 136, [255, 255, 255]) and
-            check_rgb(54, 106, [28, 205, 26]) and
+            check_rgb(51, 82, [36, 171, 22]) and
             check_rgb(818, 473, [255, 255, 255]))
 
 
@@ -543,7 +544,7 @@ def if_in_battle_face():
 
 def if_in_battle_normal():
     # if_in_battle_select的前提下，当前是否在普图界面
-    return (check_rgb(369, 126, [140, 0, 0]) and
+    return ((check_rgb(369, 126, [140, 0, 0]) or check_rgb(306, 128, [140, 0, 0])) and
             check_rgb(996, 533, [0, 52, 134]) and
             check_rgb(244, 276, [190, 0, 0]))
 
@@ -586,22 +587,23 @@ def which_map():
     7: check_rgb(702, 500,[0,0,0])
     8: check_rgb(544, 561,[0,0,0])
     """
-    if check_rgb(179, 568, [32, 31, 26]):
+    if check_rgb(524, 569, [43, 40, 37]):
         current_map = 5
-    elif check_rgb(544, 561, [0, 0, 0]):
+    elif check_rgb(558, 560, [0, 0, 0]):
         current_map = 8
-    elif check_rgb(597, 510, [84, 83, 69]):
+    elif check_rgb(597, 508, [1, 1, 1]):
         current_map = 1
-    elif check_rgb(482, 497, [104, 101, 85]):
+    elif check_rgb(135, 533, [84, 83, 74]):
         current_map = 4
-    elif check_rgb(688, 534, [10, 10, 8]):
+    elif check_rgb(434, 509, [16, 15, 12]):
         current_map = 3
-    elif check_rgb(525, 553, [0, 0, 0]):
+    elif check_rgb(526, 549, [2, 2, 2]):
         current_map = 2
-    elif check_rgb(702, 500, [0, 0, 0]):
+    elif check_rgb(631, 545, [0, 0, 0]):
         current_map = 7
-    else:
+    else:   # (780, 524 ,[0, 0, 0])
         current_map = 6
+    log("当前光标所指时代为 "+str(current_map)+"图")
     return current_map
 
 
@@ -625,7 +627,10 @@ def map_select(m, n, last_map=False):
         delta_map = m - which_map()
         if delta_map >= 0:  # 目标图号>当前所指图号
             for i in range(delta_map):
-                click(705, 215)
+                if check_rgb(705, 215,[255,255,255]):
+                    click(705, 215)
+                elif check_rgb(990,215,[255,255,255]):
+                    click(990, 215)
                 wait(500)
         else:
             for i in range(-delta_map):
