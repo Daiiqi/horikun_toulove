@@ -3,6 +3,7 @@ import time, random
 import tkinter
 import os, sys
 import threading, inspect, ctypes
+
 # 包装：pyinstaller -F -w horikun.py
 
 # <editor-fold desc="horikun: 基本的界面及功能">
@@ -10,13 +11,13 @@ import threading, inspect, ctypes
 常量定义
 """
 
-TITLELIST = [": v1.1.4", "：最新版！（大概）", ": Hello World", "：持续更新中",
+TITLELIST = [": v1.1.5", "：最新版！（大概）", ": Hello World", "：持续更新中",
              "：扫地洗衣", "：偷袭暗杀", "：请问兼桑在这里吗？", "",
              "：自定义标题", "：兼桑————————", "：：：", "：检非违使狩猎中",
              "|ω・`)", "：( ˘ω˘`)", "：要不要剪个头发？", ": kanesan.love",
              "：( ^ ^`)", "：我来咏一句吧？梅（以下略）", "：这力量是铁 这力量是钢",
              "：兼桑兼桑兼桑", "：传说中的胁差", "：例行搜查", "：兄弟的筋肉",
-             "：邪道", "：也不要忘了兄弟们哦", " : nuk-iroh", "：内置manbachan", "：内置兄弟"]
+             "：邪道", "：也不要忘了兄弟们哦", " : nuk-iroh", "：内置manbachan", "：内置兄弟", ": https://github.com/Daiiqi/horikun_toulove"]
 # 每5min输出的提示
 MIN_CHAT = ["又是5分钟。", "嗯，5分钟过去了。还要继续呢！",
             "就以5分钟为一步，慢慢走下去吧！",
@@ -327,9 +328,11 @@ button4 = tkinter.Button(root, bg='maroon', fg='white', activebackground='crimso
                          font=("华文行楷", 40), text="执行\n脚本", command=on_button)
 button4.place(x=655, y=405, width=135, height=185)
 # </editor-fold>
+
 """
 暴力引入实用函数库manbachan
 """
+
 # <editor-fold desc="manbachan: 用来给horikun运行时提供支持的函数库。">
 # ---------------------------通用-----------------------------------------------
 last_map = False  # 出阵界面默认的出阵图，是否已经固定为上次出阵时的目的地（已不用选择时代）
@@ -407,6 +410,23 @@ def if_drop_gb():
     return if_dropped_gb
 
 
+def if_inj_gb(gb_life=0):
+    """
+    在可以进军的界面，检查金蛋耐久度是否在允许值以下
+    参数：耐久占比到这个数以下时就要回城，0~1的浮点数，0为禁用。
+    保守值为0.25几乎不会再掉刀装，
+    也可以取0.15，降低掉远程刀装的概率
+    """
+    if_injed_gb = False
+    if gb_life and (gb_life < 1):
+        for j in range(3):
+            check_x = int(gb_life_X_START[j] + gb_life * (gb_life_X_END[j] - gb_life_X_START[j]))
+            for i in range(6):
+                if if_gold_tama[i][j] and check_rgb(check_x, gb_life_Y[i], gb_life_RGB):
+                    if_injed_gb = True
+    return if_injed_gb
+
+
 def if_injure(injury=0):
     """
     在可以进军的界面，检查是否有队员负伤
@@ -445,6 +465,11 @@ MARCH_GB_X = [425, 478, 530]
 MARCH_GB_Y = [163, 231, 299, 367, 435, 503]
 MARCH_GB_RGB = [255, 210, 86]
 MARCH_GB_ERR = 50
+# 临进军前检查（金）刀装耐久
+gb_life_X_START = [385, 438, 490]
+gb_life_X_END = [424, 476, 529]
+gb_life_Y = [188, 256, 324, 392, 460, 528]
+gb_life_RGB = [102, 54, 3]  # 这个地方因为不是贴图，所以不用设置模糊的ERR
 # 临进军前检查负伤情况
 MARCH_INJ_X = 208
 MARCH_INJ_Y = [137, 205, 273, 341, 409, 477]
@@ -490,9 +515,63 @@ def enter_battle_map():
     if not checked_balls:
         check_gb()
         checked_balls = True
-    click(899, 502)
+    click(899, 502)  # 点击出阵
     wait(1000)
-    click(408, 378)
+    click(408, 378)  # 点掉超等级提示
+    wait(500)
+
+
+def enter_battle_map_hanafubuki(change=False):
+    """
+    刷花时的，决定出阵这个地图。
+        点击右下选队按钮
+        等待部队加载
+        卸刀装，换刀（重点）
+        点击右下出阵按钮
+        点击确认“队伍等级超过，是否还要出阵”
+    """
+    click(888, 537)
+    wait(500)
+    while not if_in_group_select():
+        wait(500)
+    wait(500)
+    # 刷花脚本不检查金刀装。
+    if change:
+        # 进入队长的刀装界面
+        click(658, 145)
+        while not check_rgb(571, 31, [124, 81, 44]):
+            wait(500)
+        # 一键解除刀装
+        click(494, 548)
+        while not check_rgb(288, 195, [233, 227, 197]):
+            wait(500)
+        # 随便点外面哪个地方，退出刀装界面
+        click(865, 170)
+        wait(800)
+        # 换人
+        click(570, 152)
+        while not check_rgb(351, 99, [114, 111, 0]):
+            wait(500)
+        # 激活filter
+        click(176, 556)
+        wait(500)
+        # 选择“有刀装的”
+        click(244, 445)
+        wait(500)
+        # 应用filter
+        click(785, 451)
+        wait(800)
+        # 选择第一个
+        if check_rgb(436, 119, [136, 128, 31]):
+            endscript('lim')
+        else:
+            click(939, 141)
+            while not check_rgb(367, 102, [233, 222, 187]):
+                wait(500)
+    wait(500)
+    click(899, 502)  # 点击出阵
+    wait(1000)
+    click(408, 378)  # 点掉超等级提示
     wait(500)
 
 
@@ -601,9 +680,9 @@ def which_map():
         current_map = 2
     elif check_rgb(631, 545, [0, 0, 0]):
         current_map = 7
-    else:   # (780, 524 ,[0, 0, 0])
+    else:  # (780, 524 ,[0, 0, 0])
         current_map = 6
-    log("当前光标所指时代为 "+str(current_map)+"图")
+    log("当前光标所指时代为 " + str(current_map) + "图")
     return current_map
 
 
@@ -614,7 +693,7 @@ MAP4 = [[673, 342], [905, 349], [663, 445], [880, 443]]
 # 是否已在上次出阵时留下选图记录
 
 
-def map_select(m, n, last_map=False):
+def map_select(m, n, la_map=False):
     """
     普图选地图（函数：要选择的那个图是m-n）
         若还没定义上次的出阵先：
@@ -623,13 +702,13 @@ def map_select(m, n, last_map=False):
                 点击左右箭头对应次数，让m对上
             （无等待）点击对应的n
     """
-    if not last_map:
+    if not la_map:
         delta_map = m - which_map()
         if delta_map >= 0:  # 目标图号>当前所指图号
             for i in range(delta_map):
-                if check_rgb(705, 215,[255,255,255]):
+                if check_rgb(705, 215, [255, 255, 255]):
                     click(705, 215)
-                elif check_rgb(990,215,[255,255,255]):
+                elif check_rgb(990, 215, [255, 255, 255]):
                     click(990, 215)
                 wait(500)
         else:
@@ -640,7 +719,7 @@ def map_select(m, n, last_map=False):
     wait(500)
 
 
-def go_battle_simple(m, n, middle=None, injury=0, limit=0):
+def go_battle_simple(m, n, middle=None, injury=0, limit=0, gb_life=0):
     """
     从本丸或者战中的任何一个点开始，进入无脑loop的循环
     参数：
@@ -649,6 +728,7 @@ def go_battle_simple(m, n, middle=None, injury=0, limit=0):
     middle : 形如[x,y,[r,g,b]]的数组, 当满足这个颜色条件的时候，说明该中途回城了
     injure : 0-重，1-中，2-轻的整数，中止脚本所需伤势
     limit : 最大出阵次数，刷花时设成3就行。
+    gb_life : 0~1的浮点数，金蛋的耐久度小于这个比率时就该回城了。
     """
     global last_map
     global battles
@@ -671,11 +751,14 @@ def go_battle_simple(m, n, middle=None, injury=0, limit=0):
         if middle:
             if_mid = check_rgb(middle[0], middle[1], middle[2])  # 是否到该回城的预设点
         if_dropped_gb = if_drop_gb()
+        if_injed_gb = if_inj_gb(gb_life)
         if_injured = if_injure(injury)
-        if if_mid or if_dropped_gb or if_injured:  # 到地方了，要回城了
+        if if_mid or if_injed_gb or if_dropped_gb or if_injured:  # 到地方了，要回城了
             click(932, 440)
             wait(500)
             click(415, 377)
+            # 中途点回城 属正常情况
+            # 刀装低耐久度回城 属正常情况
             if if_dropped_gb:  # 掉金蛋必退出
                 endscript('gb')  # 结束后告知是因为掉蛋而退出的
             elif if_injured:  # 负伤要看程度
@@ -684,6 +767,35 @@ def go_battle_simple(m, n, middle=None, injury=0, limit=0):
         click(631, 449)
     else:
         click(631, 157)  # 没啥事的时候点上面，憋点下边，要不然可能误触进军
+    wait(1000)
+
+
+def auto_hanafubuki(limit=3):
+    """
+    全自动刷花。
+    基本结构如上，但有些许的modify。
+    """
+    global last_map
+    global battles
+    auto_hanafubuki.change = False
+    if if_in_home():
+        # 在本丸内
+        if battles >= limit:
+            auto_hanafubuki.change = True
+            battles = 0
+        enter_battle_select()
+        map_select(1, 1, last_map)
+        enter_battle_map_hanafubuki(auto_hanafubuki.change)
+        auto_hanafubuki.change = False
+        battles += 1
+        if not last_map:
+            log("去恢复疲劳度吧！")
+            last_map = True
+        else:
+            log("出阵 × " + str(battles))
+    else:
+        # 刷花时不设置禁止进军的条件。
+        click(631, 449)  # 无脑进军
     wait(1000)
 
 
