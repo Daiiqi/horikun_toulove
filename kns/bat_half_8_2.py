@@ -5,12 +5,14 @@
 middle=[718, 187, [246, 239, 222]]
 
 """
-gb_life 参数为金蛋耐久度的比率。
-检测到 降到这个比率之下(不含)的时候，
-当作到了中途点，正常回城重刷。
-是浮点数，多设几位小数也行。
+gb_life 参数为刀装耐久度的比率。
+check_balls 取值一览：
+    0——不管刀装咋样，总之进军。gb_life设置为多少都无效。
+    1——接管金刀装，掉金蛋时中断脚本，金蛋耐久低于gb_life时回城。银的、绿的不管。
+    2——同上，接管金银刀装
+    3——同上，金银绿刀装都接管
 """
 
 # 主程序
 while(1):
-    go_battle_simple(8,2, middle=middle, gb_life=0.26)
+    go_battle_simple(8,2, middle=middle, check_balls=2, gb_life=0.26)
