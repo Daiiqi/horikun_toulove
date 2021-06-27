@@ -11,13 +11,14 @@ import threading, inspect, ctypes
 常量定义
 """
 
-TITLELIST = [": v1.1.5", "：最新版！（大概）", ": Hello World", "：持续更新中",
+TITLELIST = [": v1.1.8", "：最新版！（大概）", ": Hello World", "：持续更新中",
              "：扫地洗衣", "：偷袭暗杀", "：请问兼桑在这里吗？", "",
              "：自定义标题", "：兼桑————————", "：：：", "：检非违使狩猎中",
              "|ω・`)", "：( ˘ω˘`)", "：要不要剪个头发？", ": kanesan.love",
              "：( ^ ^`)", "：我来咏一句吧？梅（以下略）", "：这力量是铁 这力量是钢",
              "：兼桑兼桑兼桑", "：传说中的胁差", "：例行搜查", "：兄弟的筋肉",
-             "：邪道", "：也不要忘了兄弟们哦", " : nuk-iroh", "：内置manbachan", "：内置兄弟", ": https://github.com/Daiiqi/horikun_toulove"]
+             "：邪道", "：也不要忘了兄弟们哦", " : nuk-iroh", "：内置kanesan",
+             "：内置兄弟", ": 欢迎来github提意见哦", ": also try KanColle-Auto!"]
 # 每5min输出的提示
 MIN_CHAT = ["又是5分钟。", "嗯，5分钟过去了。还要继续呢！",
             "就以5分钟为一步，慢慢走下去吧！",
@@ -50,6 +51,7 @@ t1 = threading.Thread()
 t2 = threading.Thread()
 # ITSNAME = "计算器"
 # ITSNAME="ToukenBrowser"
+# ITSNAME="刀剣乱舞-ONLINE- - DMM GAMES - Google Chrome"
 ITSNAME = "ToukenBrowserChromeWindow"
 hwnd = 0
 hwndDCf = 0
@@ -84,7 +86,7 @@ def log(result):
 
 
 log("本程序不为使用脚本所造成的损失承担任何责任")
-log("Kuni-kun 1.1.0    暂不支持在程序内编辑脚本")
+log("horikun 1.1.8    暂不支持在程序内编辑脚本")
 
 scrl2['command'] = text2.yview
 
@@ -143,7 +145,6 @@ def make_position(cx, cy):
 
 def click_down(cx, cy):
     win32api.SendMessage(hwnd, win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, make_position(cx, cy))  # 模拟鼠标按下
-    time.sleep(1e-2)
 
 
 def click_up(cx, cy):
@@ -163,7 +164,7 @@ def wait(t):
 # win32gui.SetForegroundWindow(hwnd)  # 这句可以把窗口拉到最前面来
 
 
-def get_RGB(x, y):
+def get_rgb(x, y):
     rgba = win32gui.GetPixel(hwndDCf, x, y)
     r = rgba & 255
     g = (rgba >> 8) & 255
@@ -174,7 +175,7 @@ def get_RGB(x, y):
 
 
 def check_rgb(x, y, rgb2):
-    rgb1 = get_RGB(x, y)
+    rgb1 = get_rgb(x, y)
     if_rgb = True
     for i in range(3):
         if_rgb &= rgb1[i] == rgb2[i]
@@ -182,7 +183,7 @@ def check_rgb(x, y, rgb2):
 
 
 def check_rgb_rough(x, y, rgb2, err):
-    rgb1 = get_RGB(x, y)
+    rgb1 = get_rgb(x, y)
     if_rgb = True
     for i in range(3):
         if_rgb &= rgb1[i] - err <= rgb2[i] <= rgb1[i] + err
@@ -329,16 +330,22 @@ button4 = tkinter.Button(root, bg='maroon', fg='white', activebackground='crimso
 button4.place(x=655, y=405, width=135, height=185)
 # </editor-fold>
 
-"""
-暴力引入实用函数库manbachan
-"""
 
-# <editor-fold desc="manbachan: 用来给horikun运行时提供支持的函数库。">
+# <editor-fold desc="kanesan: 用来给horikun提供支持的功能函数库">
 # ---------------------------通用-----------------------------------------------
 last_map = False  # 出阵界面默认的出阵图，是否已经固定为上次出阵时的目的地（已不用选择时代）
+
+"""
+改变刀装检测逻辑。
+在出阵之前，标定18个刀装位中哪些是金，哪些是银。
+在出阵中，不再对种类二次检查。检查这些刀装位上的刀装耐久度：
+如果耐久还在预期值以上（0作为最低边的一个像素判断），就继续打；
+耐久度不够，就正常返回开始下一轮；
+耐久掉到0（只要有在检查刀装耐久，就会查有没有掉刀装），当作掉刀装异常情况，中断脚本。
+"""
 checked_balls = False  # 是否已经获取了一遍金蛋位置
 battles = 0  # 已经出阵过的次数
-if_gold_tama = []  # 这个位置上是否是金刀装
+pos_balls = []  # 这个位置上是什么刀装
 
 
 def init_params():
@@ -348,12 +355,24 @@ def init_params():
     global last_map
     global checked_balls
     global battles
-    global if_gold_tama
+    global pos_balls
     last_map = False
     checked_balls = False
     battles = 0
     for i in range(6):
-        if_gold_tama.append([False, False, False])
+        pos_balls.append([0, 0, 0])
+
+
+def d(x, y):
+    # 测试用
+    print(str(int(x / 2)) + ", " + str(int(y / 2)))
+
+
+def f(x):
+    strrr = ''
+    for i in range(len(x)):
+        strrr += str(int(x[i] / 2)) + ', '
+    print(strrr[0:-2])
 
 
 def if_in_home():
@@ -398,18 +417,7 @@ def if_in_next_point():
             check_rgb(818, 473, [255, 255, 255]))
 
 
-def if_drop_gb():
-    # 在可以进军的界面，检查是否比起出阵时少了金蛋
-    if_dropped_gb = False
-    for i in range(6):
-        for j in range(3):
-            if if_gold_tama[i][j] and (
-                    not check_rgb_rough(MARCH_GB_X[j], MARCH_GB_Y[i],
-                                        MARCH_GB_RGB, MARCH_GB_ERR)):
-                if_dropped_gb = True
-    return if_dropped_gb
-
-
+# --------------------------------------------------------------------------------------------------待改-------------------------
 def if_inj_gb(gb_life=0):
     """
     在可以进军的界面，检查金蛋耐久度是否在允许值以下
@@ -418,13 +426,27 @@ def if_inj_gb(gb_life=0):
     也可以取0.15，降低掉远程刀装的概率
     """
     if_injed_gb = False
-    if gb_life and (gb_life < 1):
+    if gb_life:
         for j in range(3):
+            # gb_life为0时，该检查规则仍有效
             check_x = int(gb_life_X_START[j] + gb_life * (gb_life_X_END[j] - gb_life_X_START[j]))
             for i in range(6):
-                if if_gold_tama[i][j] and check_rgb(check_x, gb_life_Y[i], gb_life_RGB):
+                if pos_balls[i][j] and check_rgb(check_x, gb_life_Y[i], gb_life_RGB):
                     if_injed_gb = True
     return if_injed_gb
+
+
+def if_drop_gb():
+    # 在可以进军的界面，检查是否比起出阵时少了金蛋。这个函数现在是上者的特殊情况。
+    if_dropped_gb = False
+    gb_life=0
+    for j in range(3):
+        # gb_life为0时，该检查规则仍有效
+        check_x = int(gb_life_X_START[j] + gb_life * (gb_life_X_END[j] - gb_life_X_START[j]))
+        for i in range(6):
+            if pos_balls[i][j] and check_rgb(check_x, gb_life_Y[i], gb_life_RGB):
+                if_dropped_gb = True
+    return if_dropped_gb
 
 
 def if_injure(injury=0):
@@ -452,20 +474,20 @@ def enter_battle_face():
     click(987, 122)
     wait(800)
     while not if_in_battle_face():
+        click(960, 34)
         wait(500)
+        click(987, 122)
+        wait(800)
 
 
-# 临出阵前检查金刀装位置
+# 临出阵前检查刀装位置
 ENTER_GB_X = [301, 422, 541]
 ENTER_GB_Y = [134, 204, 274, 343, 413, 483]
-ENTER_GB_RGB = [255, 215, 94]
+ENTER_GB_RGB_1 = [255, 215, 94]  # 金刀装
+ENTER_GB_RGB_2 = [162, 170, 178]  # 银刀装
+ENTER_GB_RGB_3 = [134, 187, 172]  # 绿刀装
 ENTER_GB_ERR = 20
-# 临进军前检查金刀装位置
-MARCH_GB_X = [425, 478, 530]
-MARCH_GB_Y = [163, 231, 299, 367, 435, 503]
-MARCH_GB_RGB = [255, 210, 86]
-MARCH_GB_ERR = 50
-# 临进军前检查（金）刀装耐久
+# 临进军前检查刀装耐久
 gb_life_X_START = [385, 438, 490]
 gb_life_X_END = [424, 476, 529]
 gb_life_Y = [188, 256, 324, 392, 460, 528]
@@ -477,26 +499,42 @@ MARCH_INJ_RGB = [[239, 0, 0], [255, 119, 0], [239, 204, 0]]  # 重，中，低
 MARCH_INJ_ERR = 30  # 10似乎就够了？
 
 
-def check_gb():
+def check_gb(check_balls):
     """
-    出门前检查带了多少金蛋
+    出门前检查带了多少刀装
     """
-    global if_gold_tama
+    global pos_balls
     # 切换两下，浏览刀装
-    click(152, 93)
-    wait(500)
-    click(152, 93)
-    wait(1000)
+    while not check_rgb(326, 360,[244, 236, 188]):
+        click(152, 93)
+        wait(800)
     # 记录各位置上是否有金蛋
     str_gb = ""
     for i in range(6):
+        str_gb += "\n队员" + str(i + 1) + ": ["
         for j in range(3):
-            if_gold_tama[i][j] = check_rgb_rough(ENTER_GB_X[j], ENTER_GB_Y[i], ENTER_GB_RGB, ENTER_GB_ERR)
-        str_gb += "\n队员" + str(i + 1) + ": " + str(if_gold_tama[i])
+            if check_rgb_rough(ENTER_GB_X[j], ENTER_GB_Y[i], ENTER_GB_RGB_1, ENTER_GB_ERR):
+                pos_balls[i][j] = 1
+                str_gb += " 金 "
+            elif check_rgb_rough(ENTER_GB_X[j], ENTER_GB_Y[i], ENTER_GB_RGB_2, ENTER_GB_ERR):
+                pos_balls[i][j] = 2
+                str_gb += " 银 "
+            elif check_rgb_rough(ENTER_GB_X[j], ENTER_GB_Y[i], ENTER_GB_RGB_3, ENTER_GB_ERR):
+                pos_balls[i][j] = 3
+                str_gb += " 绿 "
+            else:
+                str_gb += " 无 "
+        str_gb += "]"
     log("正常刀装情况如下：" + str_gb)
+    # 然后，为了之后不对多余的刀装进行判断，根据“需要检查的刀装内容”滤除检查位。
+    for i in range(6):
+        for j in range(3):
+            if check_balls<pos_balls[i][j]:
+                pos_balls[i][j]=0
+    # 最后，pos_balls里剩下的非零位就是需要检查的刀装位置。
 
 
-def enter_battle_map():
+def enter_battle_map(check_balls):
     """
     决定出阵这个地图（函数）：
         点击右下选队按钮
@@ -512,8 +550,10 @@ def enter_battle_map():
     while not if_in_group_select():
         wait(500)
     wait(500)
+    click(151, 91)
+    wait(500)
     if not checked_balls:
-        check_gb()
+        check_gb(check_balls)
         checked_balls = True
     click(899, 502)  # 点击出阵
     wait(1000)
@@ -706,10 +746,10 @@ def map_select(m, n, la_map=False):
         delta_map = m - which_map()
         if delta_map >= 0:  # 目标图号>当前所指图号
             for i in range(delta_map):
-                if check_rgb(705, 215, [255, 255, 255]):
-                    click(705, 215)
-                elif check_rgb(990, 215, [255, 255, 255]):
-                    click(990, 215)
+                for j in range(30):
+                    if check_rgb(705 + 10 * j, 215, [255, 255, 255]):
+                        click(705 + 10 * j, 215)
+                        break
                 wait(500)
         else:
             for i in range(-delta_map):
@@ -719,7 +759,7 @@ def map_select(m, n, la_map=False):
     wait(500)
 
 
-def go_battle_simple(m, n, middle=None, injury=0, limit=0, gb_life=0):
+def go_battle_simple(m, n, middle=None, injury=0, limit=0, check_balls=0, gb_life=0):
     """
     从本丸或者战中的任何一个点开始，进入无脑loop的循环
     参数：
@@ -728,7 +768,8 @@ def go_battle_simple(m, n, middle=None, injury=0, limit=0, gb_life=0):
     middle : 形如[x,y,[r,g,b]]的数组, 当满足这个颜色条件的时候，说明该中途回城了
     injure : 0-重，1-中，2-轻的整数，中止脚本所需伤势
     limit : 最大出阵次数，刷花时设成3就行。
-    gb_life : 0~1的浮点数，金蛋的耐久度小于这个比率时就该回城了。
+    check_balls : 0为不管刀装，1为只判断金刀装耐久，2为金银都判断，3为金银绿。
+    gb_life : 0~1的浮点数，刀装的耐久度小于这个比率时就该回城了。如果check_balls为0，该参数设置无效。
     """
     global last_map
     global battles
@@ -738,7 +779,7 @@ def go_battle_simple(m, n, middle=None, injury=0, limit=0, gb_life=0):
             endscript('lim')  # 结束，并告知是因为到达出阵上限退出的
         enter_battle_select()
         map_select(m, n, last_map)
-        enter_battle_map()
+        enter_battle_map(check_balls)
         battles += 1
         if not last_map:
             log(BATTLE_CHAT[m - 1][n - 1])
@@ -837,7 +878,7 @@ def enter_campaign_map():
     """
     决定出阵这个活动地图
     """
-    enter_battle_map()
+    enter_battle_map(0)
     # 这里采取花札的门票位置
     click(504, 454)
     wait(1000)
@@ -954,10 +995,11 @@ def hanafuda_select():
     for i in range(4):
         cx = HANAFUDA_X[i]
         click_down(cx, HANAFUDA_Y[0])  # 假点击。在牌面点击，
-        wait(500)
+        wait(300)
         sum_score[i] = hanafuda_level()  # 趁机用底边绿边算分数，
-        wait(500)
+        wait(300)
         click_up(cx, HANAFUDA_Y[1])  # 在另一个地方抬起，模拟鼠标“移动”
+        wait(300)
     x = sum_score.index(max(sum_score))  # 选择得分最高的卡，
     click(HANAFUDA_X[x], HANAFUDA_Y[0])  # 点它
     wait(500)
@@ -1002,7 +1044,7 @@ def go_hanafuda_simple():
             wait(800)
 
 
-# ------------------------------------------manbachan 结束------------------------------------------
+# ------------------------------------------kanesan 结束------------------------------------------
 # </editor-fold>
 
 
